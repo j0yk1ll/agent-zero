@@ -261,6 +261,12 @@ export function drawMessageUtil(messageContainer, id, type, heading, content, te
     messageContainer.classList.add('center-container');
 }
 
+export function drawMessageDebug(messageContainer, id, type, heading, content, temp, kvps = null) {
+    const messageContent = convertImageTags(content); // Convert image tags
+    _drawMessage(messageContainer, heading, messageContent, temp, false, kvps, ['message-debug'], ['msg-json']);
+    messageContainer.classList.add('center-container');
+}
+
 export function drawMessageWarning(messageContainer, id, type, heading, content, temp, kvps = null) {
     return drawMessageAgentPlain(['message-warning'], messageContainer, id, type, heading, content, temp, kvps);
 }
