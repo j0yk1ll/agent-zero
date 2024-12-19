@@ -16,6 +16,4 @@
 
 {{ include './agent.system.tool.web.md' }}
 
-{{ include './agent.system.tool.describe_screen.md' }}
-
-{{ include './agent.system.tool.find_element_bbox.md' }}
+{{ include './agent.system.tool.vision.md' }}
