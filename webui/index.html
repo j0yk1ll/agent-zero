@@ -203,15 +203,6 @@
             </div>
             <div id="chat-history">
             </div>
-            <div id="toast" class="toast">
-                <div class="toast__content">
-                    <div class="toast__title"></div>
-                    <div class="toast__separator"></div>
-                    <div class="toast__message"></div>
-                </div>
-                <button class="toast__copy" style="display: none;">Copy</button>
-                <button class="toast__close">Close</button>
-            </div>
             <div id="progress-bar-box" x-data="{ isSpeaking: false }" x-init="
             // Watch the speech synthesis status to update isSpeaking
             setInterval(() => isSpeaking = window.speech.isSpeaking(), 100)
@@ -720,6 +711,16 @@
                 </div> -->
                 </div>
         </template>
+    </div>
+
+    <div id="toast" class="toast">
+        <div class="toast__content">
+            <div class="toast__title"></div>
+            <div class="toast__separator"></div>
+            <div class="toast__message"></div>
+        </div>
+        <button class="toast__copy" style="display: none;">Copy</button>
+        <button class="toast__close">Close</button>
     </div>
 
 </body>
