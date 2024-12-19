@@ -65,6 +65,8 @@ export function getHandler(type) {
             return drawMessageUtil;
         case 'hint':
             return drawMessageInfo;
+        case 'debug':
+            return drawMessageDebug;
         default:
             return drawMessageDefault;
     }
