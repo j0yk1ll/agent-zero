@@ -275,14 +275,4 @@ h2 {
     font-size: var(--font-size-small);
     padding: 0.5rem 0.85rem;
   }
-
-  .btn-upload {
-    margin: 0 auto;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  .btn-upload > svg {
-    width: 20px;
-  }
 }
