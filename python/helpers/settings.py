@@ -9,33 +9,39 @@ import models
 from python.helpers import runtime, whisper, defer
 from . import files, dotenv
 
+
 class Settings(TypedDict):
     chat_model_provider: str
     chat_model_name: str
     chat_model_temperature: float
-    chat_model_kwargs: dict[str, str]
     chat_model_ctx_length: int
     chat_model_ctx_history: float
     chat_model_rl_requests: int
     chat_model_rl_input: int
     chat_model_rl_output: int
+    chat_model_kwargs: dict[str, str]
 
     util_model_provider: str
     util_model_name: str
     util_model_temperature: float
-    util_model_kwargs: dict[str, str]
-    util_model_ctx_length: int
-    util_model_ctx_input: float
     util_model_rl_requests: int
     util_model_rl_input: int
     util_model_rl_output: int
+    util_model_kwargs: dict[str, str]
 
-        
+    vision_model_provider: str
+    vision_model_name: str
+    vision_model_temperature: float
+    vision_model_rl_requests: int
+    vision_model_rl_input: int
+    vision_model_rl_output: int
+    vision_model_kwargs: dict[str, str]
+
     embed_model_provider: str
     embed_model_name: str
-    embed_model_kwargs: dict[str, str]
     embed_model_rl_requests: int
     embed_model_rl_input: int
+    embed_model_kwargs: dict[str, str]
 
     agent_prompts_subdir: str
     agent_memory_subdir: str
@@ -99,7 +105,6 @@ _settings: Settings | None = None
 
 def convert_out(settings: Settings) -> SettingsOutput:
     from models import ModelProvider
-
 
     # main model section
     chat_model_fields: list[SettingsField] = []
@@ -239,28 +244,6 @@ def convert_out(settings: Settings) -> SettingsOutput:
             "value": settings["util_model_temperature"],
         }
     )
-    
-    # util_model_fields.append(
-    #     {
-    #         "id": "util_model_ctx_length",
-    #         "title": "Utility model context length",
-    #         "description": "Maximum number of tokens in the context window for LLM. System prompt, message and response all count towards this limit.",
-    #         "type": "number",
-    #         "value": settings["util_model_ctx_length"],
-    #     }
-    # )
-    # util_model_fields.append(
-    #     {
-    #         "id": "util_model_ctx_input",
-    #         "title": "Context window space for input tokens",
-    #         "description": "Portion of context window dedicated to input tokens. The remaining space can be filled with response.",
-    #         "type": "range",
-    #         "min": 0.01,
-    #         "max": 1,
-    #         "step": 0.01,
-    #         "value": settings["util_model_ctx_input"],
-    #     }
-    # )
 
     util_model_fields.append(
         {
@@ -308,6 +291,87 @@ def convert_out(settings: Settings) -> SettingsOutput:
         "fields": util_model_fields,
     }
 
+    # vision model section
+    vision_model_fields: list[SettingsField] = []
+    vision_model_fields.append(
+        {
+            "id": "vision_model_provider",
+            "title": "Vision model provider",
+            "description": "Select provider for the vision model used by Agent Zero",
+            "type": "select",
+            "value": settings["vision_model_provider"],
+            "options": [{"value": p.name, "label": p.value} for p in ModelProvider],
+        }
+    )
+    vision_model_fields.append(
+        {
+            "id": "vision_model_name",
+            "title": "Vision model name",
+            "description": "Exact name of model from selected provider",
+            "type": "text",
+            "value": settings["vision_model_name"],
+        }
+    )
+
+    vision_model_fields.append(
+        {
+            "id": "vision_model_temperature",
+            "title": "Vision model temperature",
+            "description": "Determines the randomness of generated responses. 0 is deterministic, 1 is random",
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.01,
+            "value": settings["vision_model_temperature"],
+        }
+    )
+
+    vision_model_fields.append(
+        {
+            "id": "vision_model_rl_requests",
+            "title": "Requests per minute limit",
+            "description": "Limits the number of requests per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "type": "number",
+            "value": settings["vision_model_rl_requests"],
+        }
+    )
+
+    vision_model_fields.append(
+        {
+            "id": "vision_model_rl_input",
+            "title": "Input tokens per minute limit",
+            "description": "Limits the number of input tokens per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "type": "number",
+            "value": settings["vision_model_rl_input"],
+        }
+    )
+
+    vision_model_fields.append(
+        {
+            "id": "vision_model_rl_output",
+            "title": "Output tokens per minute limit",
+            "description": "Limits the number of output tokens per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "type": "number",
+            "value": settings["vision_model_rl_output"],
+        }
+    )
+
+    vision_model_fields.append(
+        {
+            "id": "vision_model_kwargs",
+            "title": "Vision model additional parameters",
+            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file.",
+            "type": "textarea",
+            "value": _dict_to_env(settings["vision_model_kwargs"]),
+        }
+    )
+
+    vision_model_section: SettingsSection = {
+        "title": "Vision Model",
+        "description": "Selection and settings for vision model used by Agent Zero",
+        "fields": vision_model_fields,
+    }
+
     # embedding model section
     embed_model_fields: list[SettingsField] = []
     embed_model_fields.append(
@@ -329,7 +393,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
             "value": settings["embed_model_name"],
         }
     )
-    
+
     embed_model_fields.append(
         {
             "id": "embed_model_rl_requests",
@@ -628,6 +692,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
             agent_section,
             chat_model_section,
             util_model_section,
+            vision_model_section,
             embed_model_section,
             stt_section,
             api_keys_section,
@@ -690,44 +755,8 @@ def normalize_settings(settings: Settings) -> Settings:
             try:
                 copy[key] = type(value)(copy[key])  # type: ignore
             except (ValueError, TypeError):
-                copy[key] = value # make default instead
+                copy[key] = value  # make default instead
     return copy
-
-
-# def get_chat_model(settings: Settings | None = None) -> BaseChatModel:
-#     if not settings:
-#         settings = get_settings()
-#     return get_model(
-#         type=ModelType.CHAT,
-#         provider=ModelProvider[settings["chat_model_provider"]],
-#         name=settings["chat_model_name"],
-#         temperature=settings["chat_model_temperature"],
-#         **settings["chat_model_kwargs"],
-#     )
-
-
-# def get_utility_model(settings: Settings | None = None) -> BaseChatModel:
-#     if not settings:
-#         settings = get_settings()
-#     return get_model(
-#         type=ModelType.CHAT,
-#         provider=ModelProvider[settings["util_model_provider"]],
-#         name=settings["util_model_name"],
-#         temperature=settings["util_model_temperature"],
-#         **settings["util_model_kwargs"],
-#     )
-
-
-# def get_embedding_model(settings: Settings | None = None) -> Embeddings:
-#     if not settings:
-#         settings = get_settings()
-#     return get_model(
-#         type=ModelType.EMBEDDING,
-#         provider=ModelProvider[settings["embed_model_provider"]],
-#         name=settings["embed_model_name"],
-#         **settings["embed_model_kwargs"],
-#     )
-
 
 def _read_settings_file() -> Settings | None:
     if os.path.exists(SETTINGS_FILE):
@@ -776,26 +805,31 @@ def get_default_settings() -> Settings:
         chat_model_provider=ModelProvider.OPENAI.name,
         chat_model_name="gpt-4o-mini",
         chat_model_temperature=0.0,
-        chat_model_kwargs={},
         chat_model_ctx_length=120000,
         chat_model_ctx_history=0.7,
         chat_model_rl_requests=0,
         chat_model_rl_input=0,
         chat_model_rl_output=0,
+        chat_model_kwargs={},
         util_model_provider=ModelProvider.OPENAI.name,
         util_model_name="gpt-4o-mini",
         util_model_temperature=0.0,
-        util_model_ctx_length=120000,
-        util_model_ctx_input=0.7,
-        util_model_kwargs={},
         util_model_rl_requests=60,
         util_model_rl_input=0,
         util_model_rl_output=0,
+        util_model_kwargs={},
+        vision_model_provider=ModelProvider.OPENAI.name,
+        vision_model_name="gpt-4o-mini",
+        vision_model_temperature=0.0,
+        vision_model_rl_requests=0,
+        vision_model_rl_input=0,
+        vision_model_rl_output=0,
+        vision_model_kwargs={},
         embed_model_provider=ModelProvider.OPENAI.name,
         embed_model_name="text-embedding-3-small",
-        embed_model_kwargs={},
         embed_model_rl_requests=0,
         embed_model_rl_input=0,
+        embed_model_kwargs={},
         api_keys={},
         auth_login="",
         auth_password="",
@@ -831,7 +865,7 @@ def _apply_settings():
                 agent = agent.get_data(agent.DATA_NAME_SUBORDINATE)
 
         # reload whisper model if necessary
-        task = defer.DeferredTask(whisper.preload, _settings["stt_model_size"])
+        defer.DeferredTask(whisper.preload, _settings["stt_model_size"])
 
 
 def _env_to_dict(data: str):

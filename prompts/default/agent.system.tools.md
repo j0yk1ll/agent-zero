@@ -15,3 +15,5 @@
 {{ include './agent.system.tool.input.md' }}
 
 {{ include './agent.system.tool.web.md' }}
+
+{{ include './agent.system.tool.vision.md' }}

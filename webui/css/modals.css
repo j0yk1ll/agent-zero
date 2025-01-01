@@ -19,7 +19,7 @@
   background-color: var(--color-panel);
   border-radius: 12px;
   width: 90%;
-  max-width: 800px;
+  max-width: 90%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -274,15 +274,5 @@ h2 {
     text-wrap: wrap;
     font-size: var(--font-size-small);
     padding: 0.5rem 0.85rem;
-  }
-
-  .btn-upload {
-    margin: 0 auto;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  .btn-upload > svg {
-    width: 20px;
   }
 }

@@ -65,6 +65,8 @@ export function getHandler(type) {
             return drawMessageUtil;
         case 'hint':
             return drawMessageInfo;
+        case 'debug':
+            return drawMessageDebug;
         default:
             return drawMessageDefault;
     }
@@ -258,6 +260,12 @@ export function drawMessageInfo(messageContainer, id, type, heading, content, te
 export function drawMessageUtil(messageContainer, id, type, heading, content, temp, kvps = null) {
     const messageContent = convertImageTags(content); // Convert image tags
     _drawMessage(messageContainer, heading, messageContent, temp, false, kvps, ['message-util'], ['msg-json']);
+    messageContainer.classList.add('center-container');
+}
+
+export function drawMessageDebug(messageContainer, id, type, heading, content, temp, kvps = null) {
+    const messageContent = convertImageTags(content); // Convert image tags
+    _drawMessage(messageContainer, heading, messageContent, temp, false, kvps, ['message-debug'], ['msg-json']);
     messageContainer.classList.add('center-container');
 }
 

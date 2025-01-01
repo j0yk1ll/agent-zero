@@ -136,10 +136,12 @@ class AgentContext:
 
 
 @dataclass
-class ModelConfig:
+class ChatModelConfig:
     provider: models.ModelProvider
     name: str
+    temperature: float
     ctx_length: int
+    ctx_history: float
     limit_requests: int
     limit_input: int
     limit_output: int
@@ -147,16 +149,47 @@ class ModelConfig:
 
 
 @dataclass
+class UtilityModelConfig:
+    provider: models.ModelProvider
+    name: str
+    temperature: float
+    limit_requests: int
+    limit_input: int
+    limit_output: int
+    kwargs: dict
+
+
+@dataclass
+class VisionModelConfig:
+    provider: models.ModelProvider
+    name: str
+    temperature: float
+    limit_requests: int
+    limit_input: int
+    limit_output: int
+    kwargs: dict
+
+
+@dataclass
+class EmbeddingsModelConfig:
+    provider: models.ModelProvider
+    name: str
+    limit_requests: int
+    kwargs: dict
+
+
+@dataclass
 class AgentConfig:
-    chat_model: ModelConfig
-    utility_model: ModelConfig
-    embeddings_model: ModelConfig
+    chat_model: ChatModelConfig
+    utility_model: UtilityModelConfig
+    vision_model: VisionModelConfig
+    embeddings_model: EmbeddingsModelConfig
     prompts_subdir: str = ""
     memory_subdir: str = ""
     knowledge_subdirs: list[str] = field(default_factory=lambda: ["default", "custom"])
     code_exec_docker_enabled: bool = False
     code_exec_docker_name: str = "A0-dev"
-    code_exec_docker_image: str = "frdel/agent-zero-run:development"
+    code_exec_docker_image: str = "agent-zero-run:local"
     code_exec_docker_ports: dict[str, int] = field(
         default_factory=lambda: {"22/tcp": 55022, "80/tcp": 55080}
     )
@@ -487,8 +520,17 @@ class Agent:
         callback: Callable[[str], Awaitable[None]] | None = None,
         background: bool = False,
     ):
+
         prompt = ChatPromptTemplate.from_messages(
             [SystemMessage(content=system), HumanMessage(content=message)]
+        )
+
+        # Log the LLM call with "debug" type
+        self.context.log.log(
+            type="debug",
+            heading="Calling Utility Model",
+            content="",
+            kvps={"model": self.config.utility_model.name, "request": prompt.format()},
         )
 
         response = ""
@@ -516,6 +558,14 @@ class Agent:
             if callback:
                 await callback(content)
 
+        # Log the LLM response with "debug" type
+        self.context.log.log(
+            type="debug",
+            heading="Utility Model Response",
+            content="",
+            kvps={"model": self.config.utility_model.name, "response": response},
+        )
+
         return response
 
     async def call_chat_model(
@@ -523,6 +573,15 @@ class Agent:
         prompt: ChatPromptTemplate,
         callback: Callable[[str, str], Awaitable[None]] | None = None,
     ):
+
+        # Log the LLM call with "debug" type
+        self.context.log.log(
+            type="debug",
+            heading="Calling Chat Model",
+            content="",
+            kvps={"model": self.config.chat_model.name, "request": prompt.format()},
+        )
+
         response = ""
 
         # model class
@@ -546,10 +605,107 @@ class Agent:
             if callback:
                 await callback(content, response)
 
+        # Log the LLM response with "debug" type
+        self.context.log.log(
+            type="debug",
+            heading="Chat Model Response",
+            content="",
+            kvps={"model": self.config.chat_model.name, "response": response},
+        )
+
+        return response
+
+    async def call_vision_model(
+        self,
+        message: str,
+        image: str,
+        callback: Callable[[str, str], Awaitable[None]] | None = None,
+    ):
+        text_part = {"type": "text", "text": message}
+
+        if self.config.vision_model.provider == models.ModelProvider.ANTHROPIC:
+            image_part = {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": image,
+                },
+            }
+        elif self.config.vision_model.provider == models.ModelProvider.MISTRALAI:
+            image_part = {
+                "type": "image_url",
+                "image_url": f"data:image/jpeg;base64,{image}",
+            }
+        elif self.config.vision_model.provider == models.ModelProvider.OLLAMA:
+            image_part = {
+                "type": "image_url",
+                "image_url": f"data:image/jpeg;base64,{image}",
+            }
+        else:
+            image_part = {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{image}"},
+            }
+
+        content_parts = []
+
+        content_parts.append(image_part)
+        content_parts.append(text_part)
+
+        prompt = ChatPromptTemplate.from_messages([HumanMessage(content=content_parts)])
+
+        # Log the LLM call with "debug" type
+        self.context.log.log(
+            type="debug",
+            heading="Calling Vision Model",
+            content="",
+            kvps={"model": self.config.vision_model.name, "request": prompt.format()},
+        )
+
+        response = ""
+
+        # model class
+        model = models.get_model(
+            models.ModelType.CHAT,
+            self.config.vision_model.provider,
+            self.config.vision_model.name,
+            **self.config.vision_model.kwargs,
+        )
+
+        # rate limiter
+        limiter = await self.rate_limiter(self.config.vision_model, prompt.format())
+
+        async for chunk in (prompt | model).astream({}):
+            await self.handle_intervention()  # wait for intervention and handle it, if paused
+
+            content = models.parse_chunk(chunk)
+            limiter.add(output=tokens.approximate_tokens(content))
+            response += content
+
+            if callback:
+                await callback(content, response)
+
+        # Log the LLM response with "debug" type
+        self.context.log.log(
+            type="debug",
+            heading="Vision Model Response",
+            content="",
+            kvps={"model": self.config.vision_model.name, "response": response},
+        )
+
         return response
 
     async def rate_limiter(
-        self, model_config: ModelConfig, input: str, background: bool = False
+        self,
+        model_config: (
+            ChatModelConfig
+            | UtilityModelConfig
+            | VisionModelConfig
+            | EmbeddingsModelConfig
+        ),
+        input: str,
+        background: bool = False,
     ):
         # rate limiter log
         wait_log = None
@@ -572,9 +728,10 @@ class Agent:
             model_config.provider,
             model_config.name,
             model_config.limit_requests,
-            model_config.limit_input,
-            model_config.limit_output,
+            getattr(model_config, "limit_input", 0),
+            getattr(model_config, "limit_output", 0),
         )
+
         limiter.add(input=tokens.approximate_tokens(input))
         limiter.add(requests=1)
         await limiter.wait(callback=wait_callback)

@@ -570,6 +570,7 @@ pre {
 .message-code-exe,
 .message-info,
 .message-util,
+.message-debug,
 .message-warning,
 .message-error {
   color: #e0e0e0;
@@ -606,6 +607,11 @@ pre {
 
 .message-util {
   background-color: #23211a;
+  display: none;
+}
+
+.message-debug {
+  background-color: #6d3434;
   display: none;
 }
 
@@ -1815,6 +1821,11 @@ input:checked + .slider:before {
 .light-mode .message-util {
   background-color: #ffffff;
   color: #5b5540;
+}
+
+.light-mode .message-util {
+  background-color: #ffffff;
+  color: #662d29;
 }
 
 .light-mode .message-warning {
