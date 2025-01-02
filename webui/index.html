@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/settings.css">
     <link rel="stylesheet" href="css/file_browser.css">
     <link rel="stylesheet" href="css/modals.css">
-    <link rel="stylesheet" href="css/speech.css">
+    <link rel="stylesheet" href="css/stt.css">
     <link rel="stylesheet" href="css/history.css">
     <link rel="stylesheet" href="css/screen_share.css">
 
@@ -38,7 +38,8 @@
     <script type="text/javascript" src="js/file_browser.js"></script>
     <script type="text/javascript" src="js/modal.js"></script>
     <script type="text/javascript" src="js/screen_share.js"></script>
-    <script type="module" src="js/speech.js"></script>
+    <script type="module" src="js/stt.js"></script>
+    <script type="module" src="js/tts.js"></script>
     <script type="module" src="js/history.js"></script>
     <script type="module" src="index.js"></script>
 </head>
@@ -60,7 +61,7 @@
             </button>
 
             <div id="logo-container">
-                <a href="https://github.com/frdel/agent-zero" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/j0yk1ll/agent-zero" target="_blank" rel="noopener noreferrer">
                     <img src="./public/splash.jpg" alt="a0" width="22" height="22">
                 </a>
             </div>
@@ -119,62 +120,86 @@
                                 <path d="M8 4l8 8-8 8" />
                             </svg>
                         </h3>
+                        <!-- Preferences Items -->
                         <ul class="config-list" id="pref-list" x-show="prefOpen" x-collapse x-transition>
-                            <!-- Preferences Items -->
-                            <li x-data="{ autoScroll: true }">
-                                <span>Autoscroll</span>
+                            <!-- Switch -->
+                            <li x-data="{ autoScroll: localStorage.getItem('autoScroll') === 'true' }"
+                                x-init="$watch('autoScroll', val => toggleAutoScroll(val))">
+                                <span class="switch-label">Autoscroll</span>
                                 <label class="switch">
                                     <input id="auto-scroll-switch" type="checkbox" x-model="autoScroll"
-                                        x-effect="window.safeCall('toggleAutoScroll',autoScroll)">
-                                    <span class="slider"></span>
+                                        x-effect="window.safeCall('toggleAutoScroll', autoScroll)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
-                            <li x-data="{ darkMode: localStorage.getItem('darkMode') != 'false' }"
+                            <!-- Switch -->
+                            <li x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }"
                                 x-init="$watch('darkMode', val => toggleDarkMode(val))">
                                 <span class="switch-label">Dark mode</span>
                                 <label class="switch">
-                                    <input type="checkbox" x-model="darkMode">
-                                    <span class="slider"></span>
+                                    <input type="checkbox" x-model="darkMode"
+                                        x-effect="window.safeCall('toggleDarkMode', darkMode)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
-                            <li x-data="{ speech: localStorage.getItem('speech') == 'true' }"
-                                x-init="$watch('speech', val => toggleSpeech(val))">
-                                <span class="switch-label">Speech</span>
+                            <!-- Switch -->
+                            <li x-data="{ enableTTS: localStorage.getItem('enableTTS') === 'true' }"
+                                x-init="$watch('enableTTS', val => toggleEnableTTS(val))">
+                                <span class="switch-label">TTS</span>
                                 <label class="switch">
-                                    <input type="checkbox" x-model="speech">
-                                    <span class="slider"></span>
+                                    <input type="checkbox" x-model="enableTTS"
+                                        x-effect="window.safeCall('toggleEnableTTS', enableTTS)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
-                            <li x-data="{ showThoughts: true }">
-                                <span>Show thoughts</span>
+                            <!-- Switch -->
+                            <li x-data="{ continuousSTT: localStorage.getItem('continuousSTT') === 'true'  }"
+                                x-init="$watch('continuousSTT', val => toggleContinuousSTT(val))">
+                                <span class="switch-label">Continuous STT</span>
+                                <label class="switch">
+                                    <input type="checkbox" x-model="continuousSTT"
+                                        x-effect="window.safeCall('toggleContinuousSTT', continuousSTT)">
+                                    <span class="toggle"></span>
+                                </label>
+                            </li>
+                            <!-- Switch -->
+                            <li x-data="{ showThoughts: localStorage.getItem('showThoughts') === 'true' }"
+                                x-init="$watch('showThoughts', val => toggleShowThoughts(val))">
+                                <span class="switch-label">Show thoughts</span>
                                 <label class="switch">
                                     <input type="checkbox" x-model="showThoughts"
-                                        x-effect="window.safeCall('toggleThoughts',showThoughts)">
-                                    <span class="slider"></span>
+                                        x-effect="window.safeCall('toggleShowThoughts', showThoughts)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
-                            <li x-data="{ showJson: false }">
-                                <span>Show JSON</span>
+                            <!-- Switch -->
+                            <li x-data="{ showJson: localStorage.getItem('showJson') === 'true' }"
+                                x-init="$watch('showJson', val => toggleShowJson(val))">
+                                <span class="switch-label">Show JSON</span>
                                 <label class="switch">
                                     <input type="checkbox" x-model="showJson"
-                                        x-effect="window.safeCall('toggleJson',showJson)">
-                                    <span class="slider"></span>
+                                        x-effect="window.safeCall('toggleShowJson', showJson)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
-                            <li x-data="{ showUtils: false }">
-                                <span>Show utility messages</span>
+                            <!-- Switch -->
+                            <li x-data="{ showUtils: localStorage.getItem('showUtils') === 'true' }"
+                                x-init="$watch('showUtils', val => toggleShowUtils(val))">
+                                <span class="switch-label">Show utility messages</span>
                                 <label class="switch">
                                     <input type="checkbox" x-model="showUtils"
-                                        x-effect="window.safeCall('toggleUtils',showUtils)">
-                                    <span class="slider"></span>
+                                        x-effect="window.safeCall('toggleShowUtils', showUtils)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
-                            <li x-data="{ showDebug: false }">
-                                <span>Show debug messages</span>
+                            <!-- Switch -->
+                            <li x-data="{ showDebug: localStorage.getItem('showDebug') === 'true' }"
+                                x-init="$watch('showDebug', val => toggleShowDebug(val))">
+                                <span class="switch-label">Show debug messages</span>
                                 <label class="switch">
                                     <input type="checkbox" x-model="showDebug"
-                                        x-effect="window.safeCall('toggleDebug',showDebug)">
-                                    <span class="slider"></span>
+                                        x-effect="window.safeCall('toggleShowDebug', showDebug)">
+                                    <span class="toggle"></span>
                                 </label>
                             </li>
                         </ul>
@@ -202,17 +227,12 @@
                     </svg>
                 </div>
             </div>
-            <div id="chat-history">
-            </div>
-            <div id="progress-bar-box" x-data="{ isSpeaking: false }" x-init="
-            // Watch the speech synthesis status to update isSpeaking
-            setInterval(() => isSpeaking = window.speech.isSpeaking(), 100)
-        ">
+            <!-- Chat Messages -->
+            <div id="chat-history"></div>
+            <!-- Agent States -->
+            <div id="progress-bar-box">
                 <h4 id="progress-bar-h">
                     <span id="progress-bar-i">|></span><span id="progress-bar"></span>
-                </h4>
-                <h4 id="progress-bar-stop-speech" x-show="isSpeaking">
-                    <span id="stop-speech" @click="window.speech.stop()" style="cursor: pointer">Stop Speech</span>
                 </h4>
             </div>
             <div id="input-section" x-data="{ 
@@ -316,16 +336,19 @@
                             </svg>
                         </button>
 
-                        <!-- Microphone button -->
-                        <button class="chat-button mic-inactive" id="microphone-button"
-                            aria-label="Start/Stop recording">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 18" fill="currentColor">
-                                <path
-                                    d="m8,12c1.66,0,3-1.34,3-3V3c0-1.66-1.34-3-3-3s-3,1.34-3,3v6c0,1.66,1.34,3,3,3Zm-1,1.9c-2.7-.4-4.8-2.6-5-5.4H0c.2,3.8,3.1,6.9,7,7.5v2h2v-2c3.9-.6,6.8-3.7,7-7.5h-2c-.2,2.8-2.3,5-5,5.4h-2Z" />
+                        <!-- STT button -->
+                        <button class="chat-button" id="stt-button" aria-label="Start/Stop recording">
+                            <svg id="stt-button-start-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
                             </svg>
-
+                            <svg id="stt-button-stop-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 hidden">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+                            </svg>
                         </button>
-
                     </div>
                 </div>
 
@@ -419,6 +442,7 @@
             </div>
         </div>
     </div>
+    <!-- Settings Modal -->
     <div id="settingsModal" x-data="settingsModalProxy">
         <template x-teleport="body">
             <div x-show="isOpen" class="modal-overlay" @click.self="handleCancel()"
@@ -429,6 +453,7 @@
                         <button class="modal-close" @click="handleCancel()">&times;</button>
                     </div>
 
+                    <!-- Navigation Shortcuts -->
                     <div class="modal-content">
                         <div id="settings-sections">
                             <nav>
@@ -445,6 +470,8 @@
                                 </ul>
                             </nav>
                         </div>
+
+                        <!-- Sections -->
                         <template x-for="(section, sectionIndex) in settings.sections" :key="sectionIndex">
                             <div :id="'section' + (sectionIndex + 1)" class="section">
                                 <div class="section-title" x-text="section.title"></div>
@@ -490,11 +517,11 @@
 
                                             <!-- Switch field -->
                                             <template x-if="field.type === 'switch'">
-                                                <label class="toggle">
+                                                <label class="switch">
                                                     <input type="checkbox" :checked="field.value"
                                                         :disabled="field.readonly === true"
                                                         @change="field.value = $event.target.checked">
-                                                    <span class="toggler"></span>
+                                                    <span class="toggle"></span>
                                                 </label>
                                             </template>
 
@@ -547,8 +574,7 @@
         </template>
     </div>
 
-    <!-- work_dir Browser Modal -->
-
+    <!-- File Browser Modal -->
     <div id="fileBrowserModal" x-data="fileBrowserModalProxy">
         <template x-teleport="body">
             <div x-show="isOpen" class="modal-overlay" @click.self="handleClose()"
@@ -666,7 +692,8 @@
     </div>
 
     <!-- Screen Share Modal -->
-    <div id="screenShareModal" x-data="screenShareModalProxy" tabindex="-1" x-on:fullscreenchange.document="isFullscreen = !!document.fullscreenElement">
+    <div id="screenShareModal" x-data="screenShareModalProxy" tabindex="-1"
+        x-on:fullscreenchange.document="isFullscreen = !!document.fullscreenElement">
         <template x-teleport="body">
             <div x-show="isOpen" class="floating-modal" @keydown.escape.window="closeModal()" x-transition>
                 <div id="screen-share-window" class="modal-container">
@@ -686,8 +713,9 @@
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
                                 </svg>
-                                <svg x-show="isFullscreen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="20"
-                                    height="20" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <svg x-show="isFullscreen" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" width="20" height="20" stroke-width="1.5" stroke="currentColor"
+                                    class="size-6">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
                                 </svg>
@@ -707,8 +735,7 @@
         </template>
     </div>
 
-    <!-- generic modal -->
-
+    <!-- Generic Modal -->
     <div id="genericModal" x-data="genericModalProxy">
         <template x-teleport="body">
             <div x-show="isOpen" class="modal-overlay" @click.self="handleClose()"
@@ -726,6 +753,7 @@
         </template>
     </div>
 
+    <!-- Toast Container -->
     <div id="toast" class="toast">
         <div class="toast__content">
             <div class="toast__title"></div>

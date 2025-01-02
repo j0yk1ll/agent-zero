@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 import re
@@ -6,7 +5,7 @@ import subprocess
 from typing import Any, Literal, TypedDict
 
 import models
-from python.helpers import runtime, whisper, defer
+from python.helpers import runtime
 from . import files, dotenv
 
 
@@ -59,12 +58,9 @@ class Settings(TypedDict):
     rfc_port_http: int
     rfc_port_ssh: int
 
-    stt_model_size: str
-    stt_language: str
-    stt_silence_threshold: float
-    stt_silence_duration: int
-    stt_waiting_timeout: int
+    stt_url: str
 
+    tts_url: str
 
 class PartialSettings(Settings, total=False):
     pass
@@ -145,7 +141,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "chat_model_ctx_length",
             "title": "Chat model context length",
-            "description": "Maximum number of tokens in the context window for LLM. System prompt, chat history, RAG and response all count towards this limit.",
+            "description": "Maximum number of tokens in the context window for LLM. System prompt, chat history, RAG and response all count towards this limit",
             "type": "number",
             "value": settings["chat_model_ctx_length"],
         }
@@ -155,7 +151,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "chat_model_ctx_history",
             "title": "Context window space for chat history",
-            "description": "Portion of context window dedicated to chat history visible to the agent. Chat history will automatically be optimized to fit. Smaller size will result in shorter and more summarized history. The remaining space will be used for system prompt, RAG and response.",
+            "description": "Portion of context window dedicated to chat history visible to the agent. Chat history will automatically be optimized to fit. Smaller size will result in shorter and more summarized history. The remaining space will be used for system prompt, RAG and response",
             "type": "range",
             "min": 0.01,
             "max": 1,
@@ -168,7 +164,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "chat_model_rl_requests",
             "title": "Requests per minute limit",
-            "description": "Limits the number of requests per minute to the chat model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of requests per minute to the chat model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["chat_model_rl_requests"],
         }
@@ -178,7 +174,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "chat_model_rl_input",
             "title": "Input tokens per minute limit",
-            "description": "Limits the number of input tokens per minute to the chat model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of input tokens per minute to the chat model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["chat_model_rl_input"],
         }
@@ -188,7 +184,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "chat_model_rl_output",
             "title": "Output tokens per minute limit",
-            "description": "Limits the number of output tokens per minute to the chat model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of output tokens per minute to the chat model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["chat_model_rl_output"],
         }
@@ -198,7 +194,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "chat_model_kwargs",
             "title": "Chat model additional parameters",
-            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file.",
+            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file",
             "type": "textarea",
             "value": _dict_to_env(settings["chat_model_kwargs"]),
         }
@@ -249,7 +245,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "util_model_rl_requests",
             "title": "Requests per minute limit",
-            "description": "Limits the number of requests per minute to the utility model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of requests per minute to the utility model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["util_model_rl_requests"],
         }
@@ -259,7 +255,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "util_model_rl_input",
             "title": "Input tokens per minute limit",
-            "description": "Limits the number of input tokens per minute to the utility model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of input tokens per minute to the utility model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["util_model_rl_input"],
         }
@@ -269,7 +265,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "util_model_rl_output",
             "title": "Output tokens per minute limit",
-            "description": "Limits the number of output tokens per minute to the utility model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of output tokens per minute to the utility model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["util_model_rl_output"],
         }
@@ -279,15 +275,15 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "util_model_kwargs",
             "title": "Utility model additional parameters",
-            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file.",
+            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file",
             "type": "textarea",
             "value": _dict_to_env(settings["util_model_kwargs"]),
         }
     )
 
     util_model_section: SettingsSection = {
-        "title": "Utility model",
-        "description": "Smaller, cheaper, faster model for handling utility tasks like organizing memory, preparing prompts, summarizing.",
+        "title": "Utility Model",
+        "description": "Smaller, cheaper, faster model for handling utility tasks like organizing memory, preparing prompts, summarizing",
         "fields": util_model_fields,
     }
 
@@ -330,7 +326,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "vision_model_rl_requests",
             "title": "Requests per minute limit",
-            "description": "Limits the number of requests per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of requests per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["vision_model_rl_requests"],
         }
@@ -340,7 +336,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "vision_model_rl_input",
             "title": "Input tokens per minute limit",
-            "description": "Limits the number of input tokens per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of input tokens per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["vision_model_rl_input"],
         }
@@ -350,7 +346,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "vision_model_rl_output",
             "title": "Output tokens per minute limit",
-            "description": "Limits the number of output tokens per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of output tokens per minute to the vision model. Waits if the limit is exceeded. Set to 0 to disable rate limitingf",
             "type": "number",
             "value": settings["vision_model_rl_output"],
         }
@@ -360,7 +356,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "vision_model_kwargs",
             "title": "Vision model additional parameters",
-            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file.",
+            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file",
             "type": "textarea",
             "value": _dict_to_env(settings["vision_model_kwargs"]),
         }
@@ -398,7 +394,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "embed_model_rl_requests",
             "title": "Requests per minute limit",
-            "description": "Limits the number of requests per minute to the embedding model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of requests per minute to the embedding model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["embed_model_rl_requests"],
         }
@@ -408,7 +404,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "embed_model_rl_input",
             "title": "Input tokens per minute limit",
-            "description": "Limits the number of input tokens per minute to the embedding model. Waits if the limit is exceeded. Set to 0 to disable rate limiting.",
+            "description": "Limits the number of input tokens per minute to the embedding model. Waits if the limit is exceeded. Set to 0 to disable rate limiting",
             "type": "number",
             "value": settings["embed_model_rl_input"],
         }
@@ -418,7 +414,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "embed_model_kwargs",
             "title": "Embedding model additional parameters",
-            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file.",
+            "description": "Any other parameters supported by the model. Format is KEY=VALUE on individual lines, just like .env file",
             "type": "textarea",
             "value": _dict_to_env(settings["embed_model_kwargs"]),
         }
@@ -426,7 +422,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
 
     embed_model_section: SettingsSection = {
         "title": "Embedding Model",
-        "description": "Settings for the embedding model used by Agent Zero.",
+        "description": "Settings for the embedding model used by Agent Zero",
         "fields": embed_model_fields,
     }
 
@@ -462,7 +458,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
             {
                 "id": "root_password",
                 "title": "root Password",
-                "description": "Change linux root password in docker container. This password can be used for SSH access. Original password was randomly generated during setup.",
+                "description": "Change linux root password in docker container. This password can be used for SSH access. Original password was randomly generated during setup",
                 "type": "password",
                 "value": "",
             }
@@ -470,7 +466,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
 
     auth_section: SettingsSection = {
         "title": "Authentication",
-        "description": "Settings for authentication to use Agent Zero Web UI.",
+        "description": "Settings for authentication to use Agent Zero Web UI",
         "fields": auth_fields,
     }
 
@@ -497,7 +493,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
 
     api_keys_section: SettingsSection = {
         "title": "API Keys",
-        "description": "API keys for model providers and services used by Agent Zero.",
+        "description": "API keys for model providers and services used by Agent Zero",
         "fields": api_keys_fields,
     }
 
@@ -508,7 +504,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "agent_prompts_subdir",
             "title": "Prompts Subdirectory",
-            "description": "Subdirectory of /prompts folder to use for agent prompts. Used to adjust agent behaviour.",
+            "description": "Subdirectory of /prompts folder to use for agent prompts. Used to adjust agent behaviour",
             "type": "select",
             "value": settings["agent_prompts_subdir"],
             "options": [
@@ -522,7 +518,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "agent_memory_subdir",
             "title": "Memory Subdirectory",
-            "description": "Subdirectory of /memory folder to use for agent memory storage. Used to separate memory storage between different instances.",
+            "description": "Subdirectory of /memory folder to use for agent memory storage. Used to separate memory storage between different instances",
             "type": "select",
             "value": settings["agent_memory_subdir"],
             "options": [
@@ -536,7 +532,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "agent_knowledge_subdirs",
             "title": "Knowledge subdirectory",
-            "description": "Subdirectory of /knowledge folder to use for agent knowledge import. 'default' subfolder is always imported and contains framework knowledge.",
+            "description": "Subdirectory of /knowledge folder to use for agent knowledge import. 'default' subfolder is always imported and contains framework knowledge",
             "type": "select",
             "value": settings["agent_knowledge_subdir"],
             "options": [
@@ -548,28 +544,18 @@ def convert_out(settings: Settings) -> SettingsOutput:
 
     agent_section: SettingsSection = {
         "title": "Agent Config",
-        "description": "Agent parameters.",
+        "description": "Agent parameters",
         "fields": agent_fields,
     }
 
     dev_fields: list[SettingsField] = []
 
     if runtime.is_development():
-        # dev_fields.append(
-        #     {
-        #         "id": "rfc_auto_docker",
-        #         "title": "RFC Auto Docker Management",
-        #         "description": "Automatically create dockerized instance of A0 for RFCs using this instance's code base and, settings and .env.",
-        #         "type": "text",
-        #         "value": settings["rfc_auto_docker"],
-        #     }
-        # )
-
         dev_fields.append(
             {
                 "id": "rfc_url",
                 "title": "RFC Destination URL",
-                "description": "URL of dockerized A0 instance for remote function calls. Do not specify port here.",
+                "description": "URL of dockerized A0 instance for remote function calls. Do not specify port here",
                 "type": "text",
                 "value": settings["rfc_url"],
             }
@@ -579,7 +565,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
         {
             "id": "rfc_password",
             "title": "RFC Password",
-            "description": "Password for remote function calls. Passwords must match on both instances. RFCs can not be used with empty password.",
+            "description": "Password for remote function calls. Passwords must match on both instances. RFCs can not be used with empty password",
             "type": "password",
             "value": (
                 PASSWORD_PLACEHOLDER
@@ -594,7 +580,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
             {
                 "id": "rfc_port_http",
                 "title": "RFC HTTP port",
-                "description": "HTTP port for dockerized instance of A0.",
+                "description": "HTTP port for dockerized instance of A0",
                 "type": "text",
                 "value": settings["rfc_port_http"],
             }
@@ -604,7 +590,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
             {
                 "id": "rfc_port_ssh",
                 "title": "RFC SSH port",
-                "description": "SSH port for dockerized instance of A0.",
+                "description": "SSH port for dockerized instance of A0",
                 "type": "text",
                 "value": settings["rfc_port_ssh"],
             }
@@ -612,78 +598,46 @@ def convert_out(settings: Settings) -> SettingsOutput:
 
     dev_section: SettingsSection = {
         "title": "Development",
-        "description": "Parameters for A0 framework development. RFCs (remote function calls) are used to call functions on another A0 instance. You can develop and debug A0 natively on your local system while redirecting some functions to A0 instance in docker. This is crucial for development as A0 needs to run in standardized environment to support all features.",
+        "description": "Parameters for A0 framework development. RFCs (remote function calls) are used to call functions on another A0 instance. You can develop and debug A0 natively on your local system while redirecting some functions to A0 instance in docker. This is crucial for development as A0 needs to run in standardized environment to support all features",
         "fields": dev_fields,
     }
 
-    # Speech to text section
+    # Speech-To-Text section
     stt_fields: list[SettingsField] = []
 
     stt_fields.append(
         {
-            "id": "stt_model_size",
-            "title": "Model Size",
-            "description": "Select the speech recognition model size",
-            "type": "select",
-            "value": settings["stt_model_size"],
-            "options": [
-                {"value": "tiny", "label": "Tiny (39M, English)"},
-                {"value": "base", "label": "Base (74M, English)"},
-                {"value": "small", "label": "Small (244M, English)"},
-                {"value": "medium", "label": "Medium (769M, English)"},
-                {"value": "large", "label": "Large (1.5B, Multilingual)"},
-                {"value": "turbo", "label": "Turbo (Multilingual)"},
-            ],
-        }
-    )
-
-    stt_fields.append(
-        {
-            "id": "stt_language",
-            "title": "Language Code",
-            "description": "Language code (e.g. en, fr, it)",
+            "id": "stt_url",
+            "title": "Speech-To-Text Server URL",
+            "description": "URL of dockerized speech-to-text server",
             "type": "text",
-            "value": settings["stt_language"],
-        }
-    )
-
-    stt_fields.append(
-        {
-            "id": "stt_silence_threshold",
-            "title": "Silence threshold",
-            "description": "Silence detection threshold. Lower values are more sensitive.",
-            "type": "range",
-            "min": 0,
-            "max": 1,
-            "step": 0.01,
-            "value": settings["stt_silence_threshold"],
-        }
-    )
-
-    stt_fields.append(
-        {
-            "id": "stt_silence_duration",
-            "title": "Silence duration (ms)",
-            "description": "Duration of silence before the server considers speaking to have ended.",
-            "type": "text",
-            "value": settings["stt_silence_duration"],
-        }
-    )
-
-    stt_fields.append(
-        {
-            "id": "stt_waiting_timeout",
-            "title": "Waiting timeout (ms)",
-            "description": "Duration before the server closes the microphone.",
-            "type": "text",
-            "value": settings["stt_waiting_timeout"],
+            "value": settings["stt_url"],
         }
     )
 
     stt_section: SettingsSection = {
-        "title": "Speech to Text",
-        "description": "Voice transcription preferences and server turn detection settings.",
+        "title": "Speech-To-Text",
+        "description": "Speech-To-Text Settings",
         "fields": stt_fields,
+    }
+
+    # Text-To-Speech section
+    tts_fields: list[SettingsField] = []
+
+    tts_fields.append(
+        {
+            "id": "tts_url",
+            "title": "Text-To-Speech Server URL",
+            "description": "URL of dockerized text-to-speech server",
+            "type": "text",
+            "value": settings["tts_url"],
+        }
+    )
+
+    tts_section: SettingsSection = {
+        "title": "Text-To-Speech",
+        "description": "Text-To-Speech Settings",
+        "fields": tts_fields,
     }
 
     # Add the section to the result
@@ -695,6 +649,7 @@ def convert_out(settings: Settings) -> SettingsOutput:
             vision_model_section,
             embed_model_section,
             stt_section,
+            tts_section,
             api_keys_section,
             auth_section,
             dev_section,
@@ -757,6 +712,7 @@ def normalize_settings(settings: Settings) -> Settings:
             except (ValueError, TypeError):
                 copy[key] = value  # make default instead
     return copy
+
 
 def _read_settings_file() -> Settings | None:
     if os.path.exists(SETTINGS_FILE):
@@ -842,11 +798,8 @@ def get_default_settings() -> Settings:
         rfc_password="",
         rfc_port_http=55080,
         rfc_port_ssh=55022,
-        stt_model_size="base",
-        stt_language="en",
-        stt_silence_threshold=0.3,
-        stt_silence_duration=1000,
-        stt_waiting_timeout=2000,
+        stt_url="localhost:8001",
+        tts_url="localhost:8002",
     )
 
 
@@ -863,9 +816,6 @@ def _apply_settings():
             while agent:
                 agent.config = ctx.config
                 agent = agent.get_data(agent.DATA_NAME_SUBORDINATE)
-
-        # reload whisper model if necessary
-        defer.DeferredTask(whisper.preload, _settings["stt_model_size"])
 
 
 def _env_to_dict(data: str):

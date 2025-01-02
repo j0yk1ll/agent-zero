@@ -1,0 +1,37 @@
+/* STT BUTTON */
+#stt-button:hover {
+    background-color: #636363;
+    transform: scale(1.05);
+    -webkit-transform: scale(1.05);
+    transform-origin: center;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1.0);
+    }
+
+    25% {
+        transform: scale(1.1);
+    }
+
+    50% {
+        transform: scale(0.9);
+    }
+
+    75% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1.0);
+    }
+}
+
+.pulse {
+    animation: pulse 1.5s infinite;
+}
+
+.hidden {
+    display: none;
+}

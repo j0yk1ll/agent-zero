@@ -36,8 +36,8 @@ async function showEditorModal(data, type = "json", title, description = "") {
     if (container) {
         const editor = ace.edit("json-viewer-container");
 
-        const dark = localStorage.getItem('darkMode')
-        if (dark != "false") {
+        const darkMode = localStorage.getItem('darkMode') === 'true';
+        if (darkMode) {
             editor.setTheme("ace/theme/github_dark");
         } else {
             editor.setTheme("ace/theme/tomorrow");
@@ -46,7 +46,6 @@ async function showEditorModal(data, type = "json", title, description = "") {
         editor.session.setMode("ace/mode/" + type);
         editor.setValue(data);
         editor.clearSelection();
-        // editor.session.$toggleFoldWidget(5, {})
     }
 }
 

@@ -1296,7 +1296,7 @@ pre {
   width: 0;
 }
 
-.slider {
+.toggle {
   background-color: #272727;
   border: 1px solid #535353;
   border-radius: 1.15rem;
@@ -1310,7 +1310,7 @@ pre {
   transition: 0.4s ease-in-out;
 }
 
-.slider:before {
+.toggle:before {
   background-color: #b6b6b6;
   border-radius: 50%;
   bottom: 0.134rem;
@@ -1323,11 +1323,11 @@ pre {
   width: 0.8rem;
 }
 
-input:checked + .slider {
+input:checked + .toggle {
   background-color: #3a3a3a;
 }
 
-input:checked + .slider:before {
+input:checked + .toggle:before {
   -webkit-transform: translateX(1.0rem);
           transform: translateX(1.0rem);
 }
@@ -1336,11 +1336,6 @@ input:checked + .slider:before {
   line-height: 0.5rem;
   display: -webkit-flex;
   display: flex;
-}
-
-/* Tooltip */
-.tooltip {
-  /* Already defined above */
 }
 
 /* Copy button styles */
@@ -1887,16 +1882,16 @@ input:checked + .slider:before {
   opacity: 0.5;
 }
 
-.light-mode .slider {
+.light-mode .toggle {
   background-color: #f1f1f1;
   border: 1px solid #dddddd;
 }
 
-.light-mode .slider:before {
+.light-mode .toggle:before {
   background-color: #838383;
 }
 
-.light-mode input:checked + .slider {
+.light-mode input:checked + .toggle {
   background-color: #e6e6e6;
 }
 

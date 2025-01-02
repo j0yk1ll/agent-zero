@@ -196,17 +196,17 @@ const settingsModalProxy = {
         });
         input.click();
     },
-
-    // ... (other methods, if any)
 };
 
 function getIconName(title) {
     const iconMap = {
         'Agent Config': 'agentconfig',
         'Chat Model': 'chat-model',
-        'Utility model': 'utility-model',
+        'Utility Model': 'utility-model',
+        'Vision Model': 'utility-model',
         'Embedding Model': 'embed-model',
-        'Speech to Text': 'voice',
+        'Speech-To-Text': 'voice',
+        'Text-To-Speech': 'voice',
         'API Keys': 'api-keys',
         'Authentication': 'auth',
         'Development': 'dev'

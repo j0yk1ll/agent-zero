@@ -1,5 +1,4 @@
 import * as msgs from "./js/messages.js";
-import { speech } from "./js/speech.js";
 
 const leftPanel = document.getElementById('left-panel');
 const rightPanel = document.getElementById('right-panel');
@@ -15,7 +14,8 @@ const timeDate = document.getElementById('time-date-container');
 
 let autoScroll = true;
 let context = "";
-let connectionStatus = false
+let connectionStatus = false;
+let hasLoadedOldMessages = false;
 
 
 // Initialize the toggle button 
@@ -139,13 +139,6 @@ export async function sendMessage() {
             if (!jsonResponse) {
                 toast("No response returned.", "error");
             }
-            // else if (!jsonResponse.ok) {
-            //     if (jsonResponse.message) {
-            //         toast(jsonResponse.message, "error");
-            //     } else {
-            //         toast("Undefined error.", "error");
-            //     }
-            // } 
             else {
                 setContext(jsonResponse.context);
             }
@@ -187,8 +180,6 @@ sendButton.addEventListener('click', sendMessage);
 
 
 export function updateChatInput(text) {
-    console.log('updateChatInput called with:', text);
-
     // Append text with proper spacing
     const currentValue = chatInput.value;
     const needsSpace = currentValue.length > 0 && !currentValue.endsWith(' ');
@@ -197,8 +188,6 @@ export function updateChatInput(text) {
     // Adjust height and trigger input event
     adjustTextareaHeight();
     chatInput.dispatchEvent(new Event('input'));
-
-    console.log('Updated chat input value:', chatInput.value);
 }
 
 function updateUserTime() {
@@ -226,6 +215,12 @@ setInterval(updateUserTime, 1000);
 
 
 function setMessage(id, type, heading, content, temp, kvps = null) {
+    if (type === "response") {
+        if(hasLoadedOldMessages && localStorage.getItem("enableTTS") === "true") {
+            window.tts.process(content);
+        }
+    }
+
     // Search for the existing message container by id
     let messageContainer = document.getElementById(`message-${id}`);
 
@@ -264,25 +259,25 @@ window.loadKnowledge = async function () {
     input.multiple = true;
 
     input.onchange = async () => {
-        try{
-        const formData = new FormData();
-        for (let file of input.files) {
-            formData.append('files[]', file);
-        }
+        try {
+            const formData = new FormData();
+            for (let file of input.files) {
+                formData.append('files[]', file);
+            }
 
-        formData.append('ctxid', getContext());
+            formData.append('ctxid', getContext());
 
-        const response = await fetch('/import_knowledge', {
-            method: 'POST',
-            body: formData,
-        });
+            const response = await fetch('/import_knowledge', {
+                method: 'POST',
+                body: formData,
+            });
 
-        if (!response.ok) {
-            toast(await response.text(), "error");
-        } else {
-            const data = await response.json();
-            toast("Knowledge files imported: " + data.filenames.join(", "), "success");
-        }
+            if (!response.ok) {
+                toast(await response.text(), "error");
+            } else {
+                const data = await response.json();
+                toast("Knowledge files imported: " + data.filenames.join(", "), "success");
+            }
         } catch (e) {
             toastFetchError("Error loading knowledge", e)
         }
@@ -341,7 +336,6 @@ async function poll() {
     let updated = false
     try {
         const response = await sendJsonData("/poll", { log_from: lastLogVersion, context });
-        //console.log(response)
 
         if (!context) setContext(response.context)
         if (response.context != context) return //skip late polls after context change
@@ -357,7 +351,10 @@ async function poll() {
                 const messageId = log.id || log.no; // Use log.id if available
                 setMessage(messageId, log.type, log.heading, log.content, log.temp, log.kvps);
             }
-            afterMessagesUpdate(response.logs)
+
+            if (!hasLoadedOldMessages) {
+                hasLoadedOldMessages = true;
+            }
         }
 
         updateProgress(response.log_progress, response.log_progress_active)
@@ -374,7 +371,6 @@ async function poll() {
 
         lastLogVersion = response.log_version;
         lastLogGuid = response.log_guid;
-
     } catch (error) {
         console.error('Error:', error);
         setConnectionStatus(false)
@@ -383,28 +379,8 @@ async function poll() {
     return updated
 }
 
-function afterMessagesUpdate(logs) {
-    if (localStorage.getItem('speech') == 'true') {
-        speakMessages(logs)
-    }
-}
-
-function speakMessages(logs) {
-    // log.no, log.type, log.heading, log.content
-    for (let i = logs.length - 1; i >= 0; i--) {
-        const log = logs[i]
-        if (log.type == "response") {
-            if (log.no > lastSpokenNo) {
-                lastSpokenNo = log.no
-                speech.speak(log.content)
-                return
-            }
-        }
-    }
-}
-
 function updateProgress(progress, active) {
-    if (!progress) progress = ""
+    if (!progress) progress = "Waiting"
 
     if (!active) {
         removeClassFromElement(progressBar, "shiny-text")
@@ -491,44 +467,47 @@ export const getContext = function () {
 
 window.toggleAutoScroll = async function (_autoScroll) {
     autoScroll = _autoScroll;
+    localStorage.setItem('autoScroll', autoScroll);
 }
 
-window.toggleJson = async function (showJson) {
+window.toggleShowJson = async function (showJson) {
     // add display:none to .msg-json class definition
     toggleCssProperty('.msg-json', 'display', showJson ? 'block' : 'none');
+    localStorage.setItem('showJson', showJson);
 }
 
-window.toggleThoughts = async function (showThoughts) {
+window.toggleShowThoughts = async function (showThoughts) {
     // add display:none to .msg-json class definition
     toggleCssProperty('.msg-thoughts', 'display', showThoughts ? undefined : 'none');
+    localStorage.setItem('showThoughts', showThoughts);
 }
 
-window.toggleUtils = async function (showUtils) {
-    // add display:none to .msg-json class definition
+window.toggleShowUtils = async function (showUtils) {
     toggleCssProperty('.message-util', 'display', showUtils ? undefined : 'none');
-    // toggleCssProperty('.message-util .msg-kvps', 'display', showUtils ? undefined : 'none');
-    // toggleCssProperty('.message-util .msg-content', 'display', showUtils ? undefined : 'none');
+    localStorage.setItem('showUtils', showUtils);
 }
 
-window.toggleDebug = async function (showDebug) {
+window.toggleShowDebug = async function (showDebug) {
     // add display:none to .msg-json class definition
     toggleCssProperty('.message-debug', 'display', showDebug ? undefined : 'none');
+    localStorage.setItem('showDebug', showDebug);
 }
 
-window.toggleDarkMode = function (isDark) {
-    if (isDark) {
+window.toggleEnableTTS = async function (enableTTS) {
+    localStorage.setItem('enableTTS', enableTTS);
+}
+
+window.toggleContinuousSTT = async function (continuousSTT) {
+    localStorage.setItem('continuousSTT', continuousSTT);
+}
+
+window.toggleDarkMode = function (darkMode) {
+    if (darkMode) {
         document.body.classList.remove('light-mode');
     } else {
         document.body.classList.add('light-mode');
     }
-    console.log("Dark mode:", isDark);
-    localStorage.setItem('darkMode', isDark);
-};
-
-window.toggleSpeech = function (isOn) {
-    console.log("Speech:", isOn);
-    localStorage.setItem('speech', isOn);
-    if (!isOn) speech.stop()
+    localStorage.setItem('darkMode', darkMode);
 };
 
 window.nudge = async function () {
@@ -577,10 +556,15 @@ window.restart = async function () {
     }
 }
 
-// Modify this part
+// Apply preferences on init
 document.addEventListener('DOMContentLoaded', () => {
-    const isDarkMode = localStorage.getItem('darkMode') !== 'false';
-    toggleDarkMode(isDarkMode);
+    toggleDarkMode(localStorage.getItem('darkMode') === 'true');
+    toggleEnableTTS(localStorage.getItem('enableTTS') === 'true');
+    toggleContinuousSTT(localStorage.getItem('continuousSTT') === 'true');
+    toggleShowThoughts(localStorage.getItem('showThoughts') === 'true');
+    toggleShowJson(localStorage.getItem('showJson') === 'true');
+    toggleShowUtils(localStorage.getItem('showUtils') === 'true');
+    toggleShowDebug(localStorage.getItem('showDebug') === 'true');
 });
 
 window.toggleDarkMode = function (isDark) {
@@ -589,7 +573,6 @@ window.toggleDarkMode = function (isDark) {
     } else {
         document.body.classList.add('light-mode');
     }
-    console.log("Dark mode:", isDark);
     localStorage.setItem('darkMode', isDark);
 };
 
@@ -625,13 +608,6 @@ window.loadChats = async function () {
         if (!response) {
             toast("No response returned.", "error")
         }
-        // else if (!response.ok) {
-        //     if (response.message) {
-        //         toast(response.message, "error")
-        //     } else {
-        //         toast("Undefined error.", "error")
-        //     }
-        // } 
         else {
             setContext(response.ctxids[0])
             toast("Chats loaded.", "success")
@@ -831,12 +807,9 @@ function hideToast() {
 function scrollChanged(isAtBottom) {
     const inputAS = Alpine.$data(autoScrollSwitch);
     inputAS.autoScroll = isAtBottom
-    // autoScrollSwitch.checked = isAtBottom
 }
 
 function updateAfterScroll() {
-    // const toleranceEm = 1; // Tolerance in em units
-    // const tolerancePx = toleranceEm * parseFloat(getComputedStyle(document.documentElement).fontSize); // Convert em to pixels
     const tolerancePx = 50;
     const chatHistory = document.getElementById('chat-history');
     const isAtBottom = (chatHistory.scrollHeight - chatHistory.scrollTop) <= (chatHistory.clientHeight + tolerancePx);
@@ -847,8 +820,6 @@ function updateAfterScroll() {
 chatHistory.addEventListener('scroll', updateAfterScroll);
 
 chatInput.addEventListener('input', adjustTextareaHeight);
-
-// setInterval(poll, 250);
 
 async function startPolling() {
     const shortInterval = 25
